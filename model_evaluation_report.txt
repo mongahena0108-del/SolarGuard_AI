@@ -1,0 +1,30 @@
+SolarGuard AI model validation report
+====================================
+
+Data and split
+--------------
+Merged records after invalid-record removal: 136,476
+Chronological cutoff: 2020-06-14 12:30:00
+Training records: 109,196 (2020-01-06 00:00:00 to 2020-06-14 12:30:00)
+Held-out records: 27,280 (2020-06-14 12:45:00 to 2020-12-06 23:45:00)
+Held-out meaningful daylight records: 7,348
+40-case sample: 40 records, selected from the held-out daylight period across inverter IDs and irradiation bands.
+
+Random Forest comparison on complete held-out daylight test set
+---------------------------------------------------------------
+Version A includes DC_POWER: MAE=1.1895, RMSE=8.4037, R2=0.9993, MAPE(non-zero)=0.88%
+Version B excludes DC_POWER: MAE=73.5182, RMSE=150.0219, R2=0.7745, MAPE(non-zero)=16.82%
+
+Interpretation
+--------------
+Version A is useful for estimating expected AC output when contemporaneous DC_POWER is a legitimate available operating measurement. It is not a clean environmental-only counterfactual: DC_POWER is closely related to AC_POWER and can act as a prediction shortcut. Version B is the more conservative choice for judging environmental generalisation and for monitoring where DC_POWER may itself be part of the suspected fault.
+The existing dashboard R2 of 0.997 should not be presented without qualification: it was calculated on the later 20 percent but across nighttime and daylight records, and it uses DC_POWER. The daylight-only holdout metrics above are the more relevant figures for this task.
+
+Isolation Forest on held-out daylight records
+---------------------------------------------
+Training used only earlier daylight records; scoring used only later daylight records.
+Flagged observations: 2,765 of 7,348 (37.63%).
+The test summary is broken down by plant and inverter in isolation_forest_test_summary.csv.
+No fault labels exist, so these flags are not classification accuracy and do not prove component failure. They identify unusual patterns relative to the unsupervised training distribution and should be reviewed with irradiation, temperatures, peer performance, and physical inspection.
+
+40-case metrics are in model_comparison.csv and row-level predictions are in 40_case_predictions.csv.

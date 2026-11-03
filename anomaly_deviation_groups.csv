@@ -1,0 +1,5 @@
+deviation_group,records,percentage,mean_deviation_pct,flagged_records,inverters
+A: anomaly flagged + meaningful power deviation,10,0.1360914534567229,62.6216656656714,10,9
+B: anomaly flagged + no meaningful power deviation,2755,37.493195427327166,-0.4061015018552774,2755,44
+C: no anomaly + meaningful power deviation,9,0.12248230811105063,16.56411765112803,0,9
+D: neither anomaly nor meaningful power deviation,4574,62.24823081110507,-0.005254725684488854,0,44

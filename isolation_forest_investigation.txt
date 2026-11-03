@@ -1,0 +1,53 @@
+SolarGuard AI Isolation Forest investigation
+===============================================
+
+Code-verified implementation
+----------------------------
+Current Isolation Forest features: AC_POWER, DC_POWER, IRRADIATION, MODULE_TEMPERATURE, AMBIENT_TEMPERATURE, AC_DC_RATIO.
+Current contamination: 'auto' in both app.py and validation.py. 'auto' lets sklearn use its default offset rather than specifying a verified fault rate.
+Features are not scaled or normalized. AC_POWER and DC_POWER are on much larger numeric scales than temperatures and irradiation; trees can still split all features, but scale diagnostics and correlated features matter for interpretation.
+Validation uses strict IRRADIATION > 0.02, not AC_POWER as a daylight proxy. The held-out model is trained only on earlier daylight observations; test scoring uses later daylight observations. The app.py production model differs: it fits Isolation Forest on all available daylight records and uses `(IRRADIATION > 0.02) OR (AC_POWER > 0.1)`.
+Labels are produced by `predict`: -1 becomes anomaly and +1 becomes non-anomaly. `decision_function` is retained as the continuous score; lower scores are more abnormal.
+
+Held-out cohort
+---------------
+Total strict held-out daylight records: 7,348
+Flagged with current 'auto' setting: 2,765
+Unflagged: 4,583
+Overall anomaly percentage: 37.63%
+Training-baseline records scored with the same auto model: 50,186; labels on that training baseline: 20,928 (41.70%). This confirms that sklearn's 'auto' boundary is not behaving as a 10% or 1% fault prevalence estimate here.
+Plant 1 anomaly percentage: 16.06%
+Plant 2 anomaly percentage: 58.69%
+Highest inverter rate: Qf4GUc1pJu5T6c6 (Plant 2), 69.23%
+Lowest inverter rate: sjndEbLyjtCKgGv (Plant 1), 15.15%
+Affected inverters: 44 of 44
+
+Temporal and environmental interpretation
+------------------------------------------
+Top dates by flagged count:
+2020-06-17: 876/2,090 flagged (41.91%)
+2020-06-15: 807/2,156 flagged (37.43%)
+2020-06-16: 569/2,112 flagged (26.94%)
+2020-06-14: 513/990 flagged (51.82%)
+Inverter and plant tables contain rates, counts, mean scores, and environmental means. These are statistical pattern summaries, not fault evidence. High rates spread across many inverters and both plants suggest the current unsupervised boundary is describing distributional variation, operating-regime transitions, feature redundancy, or temporal drift rather than isolating a small set of confirmed failing inverters.
+
+Four-way anomaly/deviation comparison
+--------------------------------------
+Meaningful deviation means expected AC power > 5 and `(expected - actual) / expected > 15%`. This is a provisional screening rule, not a validated fault limit.
+A: anomaly flagged + meaningful power deviation: 10 records (0.14%)
+B: anomaly flagged + no meaningful power deviation: 2,755 records (37.49%)
+C: no anomaly + meaningful power deviation: 9 records (0.12%)
+D: neither anomaly nor meaningful power deviation: 4,574 records (62.25%)
+A means a statistical anomaly and output shortfall coincide and is the highest-priority review group. B is unusual without meaningful shortfall. C is output shortfall without an Isolation Forest flag. D has neither signal. None is a confirmed fault category.
+
+Contamination experiments
+-------------------------
+contamination_comparison.csv reports all requested settings, rates, affected inverters, plant rates, and score quantiles. Contamination is a threshold-selection assumption, not a measured fault prevalence. The current 'auto' setting is not defensible as a fault rate solely because it produced 37.63% flags.
+
+Feature quality and controlled alternatives
+-------------------------------------------
+anomaly_feature_analysis.csv contains feature scales and pairwise correlations. anomaly_feature_set_comparison.csv compares the current unscaled set, standard-scaled set, environment-only set, and conversion-context set using the same train/test rows and auto threshold. Scaling or feature removal should be judged by stability, interpretability, peer consistency, and agreement with physical evidence; a lower flag rate alone is not success.
+
+Recommendation
+--------------
+Present Isolation Forest as an investigation-prioritisation signal, not a fault detector. Report the 37.63% original validation rate and explain that the strict investigation cohort and current 'auto' threshold produce the rate shown in contamination_comparison.csv. Show plant/inverter concentration, environmental distributions, and the four groups before proposing a threshold. For production, fit only on a clean historical baseline, validate a contamination policy with operator-reviewed events, consider per-plant or per-regime baselines, and combine anomaly flags with repeated output deviations. No precision, recall, F1, or fault accuracy can be claimed without labels.
